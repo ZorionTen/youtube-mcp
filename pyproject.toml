@@ -1,0 +1,30 @@
+[project]
+name = "youtube-mcp"
+version = "0.1.0"
+description = "MCP server for managing a YouTube channel: upload, metadata, thumbnails, playlists — with built-in OAuth login and automatic token refresh."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "ZorionTen" }]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=2.0",
+    "google-api-python-client>=2.100",
+    "google-auth>=2.20",
+    "google-auth-oauthlib>=1.2",
+    "google-auth-httplib2>=0.2",
+]
+keywords = ["mcp", "youtube", "oauth", "upload", "llm", "agent"]
+
+[project.urls]
+Homepage = "https://github.com/ZorionTen/youtube-mcp"
+Repository = "https://github.com/ZorionTen/youtube-mcp"
+
+[project.scripts]
+youtube-mcp = "youtube_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
