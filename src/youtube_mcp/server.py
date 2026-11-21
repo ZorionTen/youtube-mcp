@@ -209,8 +209,11 @@ def yt_update_video(
     tags: list[str] | None = None,
     privacy_status: PrivacyStatus | None = None,
     category_id: str | None = None,
+    publish_at: str | None = None,
 ) -> dict[str, Any]:
-    """Patch metadata of an owned video."""
+    """Patch metadata of an owned video. publish_at (RFC3339, e.g.
+    2026-11-22T04:00:00+05:30) reschedules auto-publish; requires the video
+    to stay private."""
     body: dict[str, Any] = {}
     snippet = {k: v for k, v in (("title", title), ("description", description),
                                  ("tags", tags), ("categoryId", category_id)) if v is not None}
@@ -220,14 +223,22 @@ def yt_update_video(
             raise ValueError(f"No video found for id {video_id!r}.")
         snippet.setdefault("categoryId", existing[0]["snippet"].get("categoryId", "22"))
         body["snippet"] = snippet
+    status: dict[str, Any] = {}
     if privacy_status:
-        body["status"] = {"privacyStatus": privacy_status}
+        status["privacyStatus"] = privacy_status
+    if publish_at:
+        if (privacy_status or "private") != "private":
+            raise ValueError("publish_at (scheduled publishing) requires the video to be private.")
+        status["publishAt"] = publish_at
+    if status:
+        body["status"] = status
     if not body:
         raise ValueError("Provide at least one field to update.")
     resp = client.call(
         lambda: client.service().videos().update(part="snippet,status", body=body).execute()
     )
-    return {"video_id": resp["id"], "updated": sorted(body.keys())}
+    return {"video_id": resp["id"], "updated": sorted(body.keys()),
+            "publish_at": resp.get("status", {}).get("publishAt")}
 
 
 @server.tool(

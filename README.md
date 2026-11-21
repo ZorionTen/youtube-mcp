@@ -61,6 +61,8 @@ youtube-mcp-auth          # or: python -m youtube_mcp.auth
 
 The refresh token is saved to `~/.config/youtube-mcp/token.json` (mode `0600`, git-ignored by any sane `.gitignore`). From then on the server **refreshes access tokens automatically** on every call; if the token is revoked, tools return an error telling you to re-run login.
 
+If no desktop browser is detected automatically, set `YOUTUBE_MCP_BROWSER` to a browser binary (it is called with the authorization URL as its first argument), or open the URL the tool prints manually.
+
 ## Client configuration
 
 ### Claude Code

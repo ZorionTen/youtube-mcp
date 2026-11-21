@@ -83,6 +83,12 @@ def load_client_credentials() -> dict[str, str]:
         if raw and Path(raw).is_file():
             return _read_client_file(Path(raw))
 
+    # Reuse credentials embedded in an existing token store (lets users re-login
+    # after revocation without re-supplying the client secret file).
+    store = load_token_store()
+    if store and store.get("client_id") and store.get("client_secret"):
+        return {"client_id": store["client_id"], "client_secret": store["client_secret"]}
+
     raise AuthError(
         "No OAuth client credentials found. Create an OAuth 2.0 client ID "
         "(type: Desktop app) in Google Cloud Console (APIs & Services → "
@@ -182,6 +188,41 @@ def _exchange_code(client: dict[str, str], code: str, redirect_uri: str) -> dict
         raise AuthError(f"Code exchange failed ({exc.code}): {detail}") from exc
 
 
+def _open_browser(url: str) -> None:
+    """Open the authorization URL in a graphical browser.
+
+    Order: $YOUTUBE_MCP_BROWSER (binary that accepts a URL argument),
+    common browsers on PATH, Python's webbrowser fallback. Failures are
+    non-fatal — login() surfaces the URL for manual opening.
+    """
+    import shutil
+    import subprocess
+
+    candidates = [os.environ.get("YOUTUBE_MCP_BROWSER")]
+    candidates += [
+        shutil.which(name)
+        for name in (
+            "google-chrome", "google-chrome-stable", "chromium",
+            "chromium-browser", "brave-browser", "firefox",
+        )
+    ]
+    for browser in filter(None, candidates):
+        try:
+            subprocess.Popen(
+                [browser, url],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            return
+        except OSError:
+            continue
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
+
+
 def login(timeout_seconds: int = 180, open_browser: bool = True) -> dict[str, Any]:
     """Full loopback OAuth flow: serve redirect, open browser, store refresh token."""
     client = load_client_credentials()
@@ -213,10 +254,7 @@ def login(timeout_seconds: int = 180, open_browser: bool = True) -> dict[str, An
 
     threading.Thread(target=server.handle_request, daemon=True).start()
     if open_browser:
-        try:
-            webbrowser.open(auth_url)
-        except Exception:
-            pass
+        _open_browser(auth_url)
     if not event.wait(timeout_seconds):
         server.server_close()
         raise AuthError(
