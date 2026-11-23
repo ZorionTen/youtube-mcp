@@ -234,8 +234,9 @@ def yt_update_video(
         body["status"] = status
     if not body:
         raise ValueError("Provide at least one field to update.")
+    part = "snippet,status" if "status" in body else "snippet"
     resp = client.call(
-        lambda: client.service().videos().update(part="snippet,status", body=body).execute()
+        lambda: client.service().videos().update(part=part, body=body).execute()
     )
     return {"video_id": resp["id"], "updated": sorted(body.keys()),
             "publish_at": resp.get("status", {}).get("publishAt")}
