@@ -222,6 +222,10 @@ def yt_update_video(
         if not existing:
             raise ValueError(f"No video found for id {video_id!r}.")
         snippet.setdefault("categoryId", existing[0]["snippet"].get("categoryId", "22"))
+        # YouTube rejects snippet updates without a title: keep the current one.
+        snippet.setdefault("title", existing[0]["snippet"].get("title", ""))
+        if not snippet.get("title"):
+            raise ValueError("Video has no title to preserve; provide one with this update.")
         body["snippet"] = snippet
     status: dict[str, Any] = {}
     if privacy_status:
